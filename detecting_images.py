@@ -4,6 +4,8 @@ from tkinter import filedialog
 import copy
 from abc import ABC, abstractclassmethod
 from time import sleep
+from operator import sub
+import math
 
 class Copyable(ABC):
     @abstractclassmethod
@@ -13,7 +15,8 @@ class Copyable(ABC):
     @abstractclassmethod
     def __deepcopy__(self, memo):
         pass
-
+class Oval(Copyable):
+    pass
 
 class Oval(Copyable):
     pixels: list
@@ -23,9 +26,13 @@ class Oval(Copyable):
         self.x_max = -1
         self.y_min = -1
         self.y_max = -1
+        self.measureRef = None
     
     def set_pixels_collection(self,pixels_collection:list):
         self.pixels = copy.deepcopy(pixels_collection)
+
+    def update_measure_ref(self,measureRef):
+        self.measureRef = measureRef
 
     def calculate_oval_bounding_box(self):
         for coords in self.pixels:
@@ -46,46 +53,163 @@ class Oval(Copyable):
         new_oval = Oval()
         new_oval.set_pixels_collection(self.pixels)
         new_oval.calculate_oval_bounding_box()
+        new_oval.measureRef = self.measureRef
         return new_oval
+
+    def __eq__(self, value: Oval) -> bool:
+        temp_list_is_equals = set(self.pixels) == set(value.pixels)
+        return self.measureRef == value.measureRef and self.x_max == value.x_max and self.x_min == value.x_min and self.y_min == value.y_min and self.y_max == value.y_max and temp_list_is_equals
+    
+class Measure(Copyable):
+    def __init__(self, ovalRef: Oval) -> None:
+        self.ovalRef = ovalRef
+        self.average_x = 0
+        self.absoluteErr_x = 0
+        self.average_y = 0
+        self.absoluteErr_y = 0
+        self.calc_average()
+        self.calc_error()
+    def calc_average(self):
+        count = len(self.ovalRef.pixels)
+        for pixel in self.ovalRef.pixels:
+            self.average_x += pixel[0]
+            self.average_y += pixel[1]
+        self.average_x /= count
+        self.average_x /= count
+    def calc_error(self):
+        if (self.average_x == 0 or self.average_y == 0):
+            return 
+        count = len(self.ovalRef.pixels)
+        for pixel in self.ovalRef.pixels:
+            self.absoluteErr_x += ((pixel[0] - self.average_x)**2)/count
+            self.absoluteErr_y += ((pixel[1] - self.average_y)**2)/count
+        self.absoluteErr_x = math.sqrt(self.absoluteErr_x)
+        self.absoluteErr_y = math.sqrt(self.absoluteErr_y)
+    
+    def __copy__(self):
+        return self
+    
+    def __deepcopy__(self,memo):
+        new_measure = Measure(self.ovalRef)
+        new_measure.average_x = self.average_x
+        new_measure.average_y = self.average_y
+        new_measure.absoluteErr_x = self.absoluteErr_x
+        new_measure.absoluteErr_y = self.absoluteErr_y
+        return new_measure
+        
+
+class Entitie(Copyable):
+    def __init__(self) -> None:
+        self.measuretuple = []
+        self.motion_vector = (0,0)
+        self.last_position = (0,0)
+        self.last_position_error = (0,0)
+    def add_pair(self,measure: Measure, timestamp: int):
+        self.measuretuple.append((measure,timestamp))
+    def is_empty(self):
+        if not self.measuretuple:
+            return True
+        return False
+    def update_last_position(self):
+        if not self.measuretuple:
+            return 
+        last_measure: Measure
+        last_measure = self.measuretuple[-1][0]
+        if(self.last_position[0] != last_measure.average_x or self.last_position[1] != last_measure.average_y):
+            self.last_position = (last_measure.average_x,last_measure.average_y)
+            self.last_position_error = (last_measure.absoluteErr_x,last_measure.absoluteErr_y)
+            if(len(self.measuretuple) == 1):
+                return 
+            new_motion_vector = tuple(map(sub, zip(self.measuretuple[-1],self.measuretuple[-2])))
+            self.motion_vector = ((self.motion_vector[0] + new_motion_vector[0])/2,(self.motion_vector[1] + new_motion_vector[1])/2)
+
+    def predicted_position(self):
+        predicted_position = tuple(map(sum, zip(self.last_position, self.motion_vector)))
+        return (predicted_position[0],predicted_position[1],self.last_position_error[0],self.last_position_error[1])
+    def __copy__(self):
+        return self
+    def __deepcopy__(self,memo):
+        new_entitie = Entitie()
+        new_entitie.measuretuple = copy.deepcopy(self.measuretuple)
+        return new_entitie
+    
+class EntitiesStoreMemento:
+    pass
+
+class EntitiesStore(Copyable):
+    def __init__(self) -> None:
+        self.entitieList = []
+        self.actual_timestamp = 0
+    def updateEntitie(self, entitie: Entitie, new_measure: Measure, timestamp: int):
+        if entitie.is_empty() or self.entitieList.index(entitie) == ValueError:
+            entitie.add_pair(new_measure,timestamp)
+            self.entitieList.append(entitie)
+        else:
+            index_of_entity = self.entitieList.index(entitie)
+            self.entitieList[index_of_entity].measuretuple.add_pair(new_measure,timestamp)
+    def addEntitie(self, new_entitie: Entitie):
+        self.entitieList.append(new_entitie)
+    def createMemento(self):
+        return EntitiesStoreMemento(self,self.entitieList,self.actual_timestamp)
+    
+    def __copy__(self):
+        return self
+    def __deepcopy__(self, memo):
+        new_entitieStore = EntitiesStore()
+        new_entitieStore.entitieList = copy.deepcopy(self.entitieList)
+        new_entitieStore.actual_timestamp = self.actual_timestamp
+        return new_entitieStore
+
+class EntitiesStoreMemento:
+    entitiesStoreRef: EntitiesStore
+    def __init__(self, entitieStoreRef, entitieList, timestamp) -> None:
+        self.entitiesStoreRef = entitieStoreRef
+        self.entitieList = copy.deepcopy(entitieList)
+        self.actual_timestamp = timestamp
+    def restore(self):
+        self.entitiesStoreRef.entitieList = copy.deepcopy(self.entitieList)
+        self.entitiesStoreRef.actual_timestamp = copy.deepcopy(self.actual_timestamp)
     
 class Screen:
-    def __init__(self, path) -> None:
+    def __init__(self, path, timestamp) -> None:
         self.path = path
         self.oval_list = []
         self.measures = []
+        self.timestamp = timestamp
 
     def set_Oval_list(self, oval_list: list):
         self.oval_list = copy.deepcopy(oval_list)
 
-class ScreenCollection:
+class StateCollection:
     def __init__(self) -> None:
-        self.screens = []
+        self.states = []
         self.screen_width = 0
         self.screen_height = 0
         self.current_screen_index = 0  # Added to keep track of the current screen index
 
-    def add_screen(self,screen: Screen):
+    def add_state(self,screen: Screen,entities: EntitiesStoreMemento):
         if(self.screen_height != 0 or self.screen_width != 0):
             img = Image.open(screen.path)
             if(img.width != self.screen_width or img.height != self.screen_height):
                 print("Images have different dimensions")
                 exit(1)
             else:
-                self.screens.append(screen)
+                self.states.append((screen,entities))
         else:
-            self.screens.append(screen)
+            self.states.append((screen,entities))
             img = Image.open(screen.path)
             self.screen_height = img.height
             self.screen_width = img.width
 
     def get_current_screen(self):
-        return self.screens[self.current_screen_index]
+        return self.states[self.current_screen_index][0]
 
     def switch_to_next_screen(self):
-        self.current_screen_index = (self.current_screen_index + 1) % len(self.screens)
+        self.current_screen_index = (self.current_screen_index + 1) % len(self.states)
 
     
-screenCollection = ScreenCollection()
+stateCollection = StateCollection()
+entitiesStore = EntitiesStore()
 
 
 def get_pixels_in_oval(img_ref:Image, oval_pixel_list: list, x_center: int, y_center:int ):
@@ -135,6 +259,13 @@ def detect_ovals(img, screen: Screen):
     screen.set_Oval_list(ovals)                 
     print(len(ovals))
 
+def detect_objects(screen: Screen):
+    oval: Oval
+    for oval in screen.oval_list:
+        measure = Measure(oval)
+        oval.measureRef = measure
+
+
 
 def draw_rectangles(draw,screen: Screen):
     rect: Oval
@@ -143,11 +274,15 @@ def draw_rectangles(draw,screen: Screen):
         draw.rectangle(rect.get_rectangle_bounding_box(), outline="red", width=1)
 
 def process_images(image_paths):
+    iterator = 0
     for image_path in image_paths:
-        new_screen = Screen(image_path)
+        new_screen = Screen(image_path, iterator)
         img = Image.open(new_screen.path)
         detect_ovals(img,new_screen)
-        screenCollection.add_screen(new_screen)
+        new_entetie = Entitie()
+        entitiesStore.addEntitie(new_entetie)
+        stateCollection.add_state(new_screen,entitiesStore.createMemento())
+        iterator += 1
 
 
 def browse_image():
@@ -156,7 +291,7 @@ def browse_image():
         process_images(file_paths)
 
         while True:  # Loop through screens indefinitely
-            current_screen = screenCollection.get_current_screen()
+            current_screen = stateCollection.get_current_screen()
             result_image = Image.open(current_screen.path)
             draw = ImageDraw.Draw(result_image)
 
@@ -170,7 +305,7 @@ def browse_image():
             root.update()
             sleep(0.5)
 
-            screenCollection.switch_to_next_screen()  # Switch to the next screen
+            stateCollection.switch_to_next_screen()  # Switch to the next screen
 
 # GUI setup
 root = tk.Tk()
