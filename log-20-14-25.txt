@@ -1,0 +1,133 @@
+measures for timestamp: 1
+measure 1 : (75.5,154.0)
+measure 2 : (207.46808510638297,180.01276595744682)
+measure 3 : (787.5,341.5)
+measure 4 : (1010.0,331.5)
+measure 5 : (1147.5,59.0)
+entities from timestamp: 0
+entitie 1 : ((112.5, 138.5)) 
+entitie 2 : ((167.46808510638297, 180.01276595744682)) 
+entitie 3 : ((822.5, 323.0)) 
+entitie 4 : ((986.5210918114144, 299.51861042183623)) 
+entitie 5 : ((1186.9783783783785, 54.01891891891892)) 
+assiocations (entitie.id, measure.id, probability)
+Assiocation (4 , 4 , 0.8654912761466454)
+Assiocation (1 , 1 , 0.8549107228444411)
+Assiocation (5 , 5 , 0.808634504703169)
+Assiocation (3 , 3 , 0.8024571973917195)
+Assiocation (2 , 2 , 0.46221879634389573)
+Assiocation (1 , 2 , 0.3524885950532329)
+Assiocation (3 , 4 , 0.06601688766757503)
+assiocations entitie measure list
+Assiocation (4 , 4 , 0.8654912761466454)
+global probability for assciocation: [Assiocation(densityDistribution: <ProbabilityDensityDistribution.ProbabilityDensityDistribution object at 0x000001CA6EB4C5E0>, entity: Entitie(measureTuple: Tuple(Measure, int), motionVector: Tuple(int,int), lastPosition: Tuple(int,int), lastPositionError: Tuple(int,int)), measure: Measure(average_x: 1010.0, average_y: 331.5, absoluteErr_x: 5.615050828934524, absoluteErr_y: 5.4165491999613655)), 0.256414459662523]blobal probability: 0.256414459662523Assiocations ( 
+        	 parent: None 
+        	 next: Assiocations 
+        	 Assiocations number: 7 
+        	 entity: Assciocation (  
+        	 densityValue: <ProbabilityDensityDistribution.ProbabilityDensityDistribution object at 0x000001CA6EB4C5E0> 
+        	 entity: Entitie (
+        measurestuple: [(Measure(average_x: 986.5210918114144, average_y: 299.51861042183623, absoluteErr_x: 5.869670270202641, absoluteErr_y: 5.465118448593942), 0)]
+        motion vector: (0, 0)
+        lastPosition: (986.5210918114144, 299.51861042183623)
+        )
+         
+        	 measure: Measure id: 4 
+                 coords: (1010.0,331.5)  
+        ) 
+        	 entities measure list number: 1 
+        )Assiocations ( 
+        	 parent: Assiocations 
+        	 next: Assiocations 
+        	 Assiocations number: 5 
+        	 entity: Assciocation (  
+        	 densityValue: <ProbabilityDensityDistribution.ProbabilityDensityDistribution object at 0x000001CA6EB4C1C0> 
+        	 entity: Entitie (
+        measurestuple: [(Measure(average_x: 112.5, average_y: 138.5, absoluteErr_x: 5.4711213034287285, absoluteErr_y: 5.877672132993667), 0)]
+        motion vector: (0, 0)
+        lastPosition: (112.5, 138.5)
+        )
+         
+        	 measure: Measure id: 1 
+                 coords: (75.5,154.0)  
+        ) 
+        	 entities measure list number: 2 
+        )Assiocations ( 
+        	 parent: Assiocations 
+        	 next: Assiocations 
+        	 Assiocations number: 3 
+        	 entity: Assciocation (  
+        	 densityValue: <ProbabilityDensityDistribution.ProbabilityDensityDistribution object at 0x000001CA6EB4C700> 
+        	 entity: Entitie (
+        measurestuple: [(Measure(average_x: 1186.9783783783785, average_y: 54.01891891891892, absoluteErr_x: 5.173170659048532, absoluteErr_y: 5.691830933171175), 0)]
+        motion vector: (0, 0)
+        lastPosition: (1186.9783783783785, 54.01891891891892)
+        )
+         
+        	 measure: Measure id: 5 
+                 coords: (1147.5,59.0)  
+        ) 
+        	 entities measure list number: 1 
+        )Assiocations ( 
+        	 parent: Assiocations 
+        	 next: Assiocations 
+        	 Assiocations number: 2 
+        	 entity: Assciocation (  
+        	 densityValue: <ProbabilityDensityDistribution.ProbabilityDensityDistribution object at 0x000001CA6EB4C4C0> 
+        	 entity: Entitie (
+        measurestuple: [(Measure(average_x: 822.5, average_y: 323.0, absoluteErr_x: 5.794365825927394, absoluteErr_y: 4.230378694171936), 0)]
+        motion vector: (0, 0)
+        lastPosition: (822.5, 323.0)
+        )
+         
+        	 measure: Measure id: 3 
+                 coords: (787.5,341.5)  
+        ) 
+        	 entities measure list number: 1 
+        )Assiocations ( 
+        	 parent: Assiocations 
+        	 next: Assiocations 
+        	 Assiocations number: 1 
+        	 entity: Assciocation (  
+        	 densityValue: <ProbabilityDensityDistribution.ProbabilityDensityDistribution object at 0x000001CA6EB4C3A0> 
+        	 entity: Entitie (
+        measurestuple: [(Measure(average_x: 167.46808510638297, average_y: 180.01276595744682, absoluteErr_x: 4.009833995766905, absoluteErr_y: 4.659906720885274), 0)]
+        motion vector: (0, 0)
+        lastPosition: (167.46808510638297, 180.01276595744682)
+        )
+         
+        	 measure: Measure id: 2 
+                 coords: (207.46808510638297,180.01276595744682)  
+        ) 
+        	 entities measure list number: 1 
+        )measures for timestamp: 2
+measure 1 : (39.5,170.0)
+measure 2 : (247.46808510638297,181.01276595744682)
+measure 3 : (751.5,360.5)
+measure 4 : (1034.0,363.5)
+measure 5 : (1107.971671388102,64.5070821529745)
+measure 6 : (1198.984886649874,46.99244332493703)
+entities from timestamp: 1
+entitie 1 : ((112.5, 138.5)) 
+entitie 2 : ((167.46808510638297, 180.01276595744682)) 
+entitie 3 : ((822.5, 323.0)) 
+entitie 4 : ((986.5210918114144, 299.51861042183623)) 
+entitie 5 : ((1186.9783783783785, 54.01891891891892)) 
+assiocations (entitie.id, measure.id, probability)
+Assiocation (5 , 6 , 0.9766892851355585)
+Assiocation (4 , 4 , 0.8654912761466454)
+Assiocation (1 , 1 , 0.8549107228444411)
+Assiocation (5 , 5 , 0.808634504703169)
+Assiocation (3 , 3 , 0.8024571973917195)
+Assiocation (4 , 4 , 0.5589989876837803)
+Assiocation (1 , 1 , 0.5410374830555614)
+Assiocation (2 , 2 , 0.46221879634389573)
+Assiocation (5 , 5 , 0.4267324035391175)
+Assiocation (3 , 3 , 0.40460369147943975)
+Assiocation (1 , 2 , 0.3524885950532329)
+Assiocation (1 , 2 , 0.1371280783113071)
+Assiocation (3 , 4 , 0.06601688766757503)
+assiocations entitie measure list
+Assiocation (5 , 6 , 0.9766892851355585)
+Assiocation (5 , 5 , 0.808634504703169)
+Assiocation (5 , 5 , 0.4267324035391175)
