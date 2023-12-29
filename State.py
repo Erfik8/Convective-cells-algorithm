@@ -1,13 +1,13 @@
 from Screen import Screen
-from Entitie import EntitiesStoreMemento
+from Entitie import EntitiesStoreMemento, EntitiesStore
 from PIL import Image
 
 class StateCollection:
     def __init__(self) -> None:
-        self.states = []
-        self.screen_width = 0
-        self.screen_height = 0
-        self.current_screen_index = 0  # Added to keep track of the current screen index
+        self.states: list[tuple[Screen,EntitiesStoreMemento]] = []
+        self.screen_width: int = 0
+        self.screen_height: int = 0
+        self.current_screen_index: int = 0  # Added to keep track of the current screen index
 
     def add_state(self,screen: Screen, entities: EntitiesStoreMemento):
         if(self.screen_height != 0 or self.screen_width != 0):
@@ -34,6 +34,9 @@ class StateCollection:
         self.current_screen_index = 0
     def get_current_screen(self):
         return self.states[self.current_screen_index][0]
+    
+    def get_current_entities(self) -> EntitiesStore:
+        return self.states[self.current_screen_index][1].rester_to_new()
 
     def switch_to_next_screen(self):
         self.current_screen_index = (self.current_screen_index + 1) % len(self.states)

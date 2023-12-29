@@ -1,3 +1,4 @@
+from __future__ import annotations
 from PIL import Image, ImageTk, ImageDraw
 import tkinter as tk
 from tkinter import filedialog
@@ -6,8 +7,7 @@ from time import sleep
 from operator import sub
 import math
 from Copyable import Copyable
-from Oval import Oval
-from Measure import Measure
+from Elements import Oval, Measure
 from Entitie import *
 from Screen import Screen
 from State import StateCollection  
@@ -17,15 +17,12 @@ import time
 
 
 class Assiocation(Printable):
-    densitydistribution: ProbabilityDensityDistribution
-    entity: Entitie
-    measure: Measure
     def __init__(self, densitydistribution, entitie, measure) -> None:
-        self.densitydistribution = densitydistribution
-        self.entity = entitie
-        self.measure = measure
+        self.densitydistribution: ProbabilityDensityDistribution = densitydistribution
+        self.entity: Entitie = entitie
+        self.measure: Measure = measure
     
-    def get_distribution(self):
+    def get_distribution(self) -> float:
         return self.densitydistribution.value
     
     def __repr__(self) -> str:
@@ -39,28 +36,22 @@ class Assiocation(Printable):
         )"""
 
 class Assiocations(Printable):
-    pass
-class Assiocations(Printable):
     def __init__(self, parentElement: Assiocation = None) -> None:
-        self.assiocationList = []
-        self.EntitieMeasureList = []
-        self.parentElement = parentElement
-        self.nextElement = None
+        self.assiocationList: list[Assiocation] = []
+        self.EntitieMeasureList: list[tuple[Assiocation,int]] = []
+        self.parentElement: Assiocations = parentElement
+        self.nextElement: Assiocations = None
     
     def create_list(self):
-        rootAssiocationsList = self
-        previousAssiocations = []
-        while rootAssiocationsList.parentElement:
-            rootAssiocationsList = rootAssiocationsList.parentElement
-            previousAssiocations.append(rootAssiocationsList.assiocationList[0])
-        if(rootAssiocationsList == self and not previousAssiocations):
-            # this element is root - do nothing
+        if self.parentElement == None:
             return
-        else:
-            self.assiocationList = list(filter(lambda x: x.entity not in [y.entity for y in previousAssiocations], rootAssiocationsList.assiocationList))
-            self.assiocationList = list(filter(lambda x: x.measure not in [y.measure for y in previousAssiocations], self.assiocationList))
-            self.assiocationList = list(filter(lambda x: x.densitydistribution.value > 0.05, self.assiocationList))
-        self.sort_list()
+        previousAssiocationList = self.parentElement.assiocationList
+        previousEntity: Entitie = self.parentElement.assiocationList[0].entity
+        assiocation: Assiocation
+        for assiocation in previousAssiocationList:
+            if(assiocation.entity != previousEntity):
+                self.assiocationList.append(assiocation)
+        #self.sort_list()
 
     def create_entitie_measure_list(self):
         if not self.assiocationList:
@@ -71,6 +62,9 @@ class Assiocations(Printable):
 
     def sort_list(self):
         self.assiocationList.sort(key=lambda x: x.get_distribution(),reverse=True)
+    
+    def clear(self) -> None:
+        self.assiocationList.clear()
 
     def __repr__(self) -> str:
         return f"Assiocations(assiocationList: list(Assiocation), EntitieMeasureList: list(tuple(Assiocation,int)), parentElement: {repr(self.parentElement)}, nextElement: {repr(self.nextElement)}"
@@ -87,12 +81,12 @@ class Assiocations(Printable):
 
 class GlobalAssiocation:
     def __init__(self, assiocations: Assiocations) -> None:
-        self.assiocations = assiocations
+        self.assiocations: Assiocations = assiocations
     
     def calc_global_probability(self):
-        best_assiocation = None
-        best_probability = -1
-        new_assiocation = None
+        best_assiocation: Assiocation = None
+        best_probability: int = -1
+        new_assiocation: Assiocations = None
         #print("entitie table size: ",len(self.assiocations.EntitieMeasureList))
         for assiocation in self.assiocations.EntitieMeasureList:
             new_assiocation = Assiocations(self.assiocations)
@@ -108,8 +102,9 @@ class GlobalAssiocation:
                 best_assiocation = new_assiocation
             assiocation[1] = probability
             if(self.assiocations.parentElement == None):
-                log_file.write("global probability for assciocation: "+str(assiocation))
-                log_file.write("blobal probability: "+str(assiocation[1]))
+                #log_file.write("global probability for assciocation: "+str(assiocation))
+                #log_file.write("blobal probability: "+str(assiocation[1]))
+                pass
         if(best_probability < 0):
             return 1
         self.assiocations.nextElement = best_assiocation
@@ -138,11 +133,9 @@ def get_pixels_in_oval(img_ref:Image, oval_pixel_list: list, x_center: int, y_ce
                 continue
             if(y < 0 or y >= img_ref.size[1]):
                 continue
-            #if(img_ref.getpixel((x,y)) == img_ref.getpixel((x_center,y_center)) and (x,y) not in oval_pixel_list):
             if((x,y) not in oval_pixel_list):
                 get_pixels_in_oval(img_ref,oval_pixel_list,x,y)
-
-
+                
 def is_in_any_oval(pixel_coords, ovals):
     oval: Oval
     for oval in ovals:
@@ -151,7 +144,7 @@ def is_in_any_oval(pixel_coords, ovals):
     return False
 
 
-def detect_ovals(img, screen: Screen):
+def detect_ovals(img: Image, screen: Screen):
     width, height = img.size
     ovals = []
     oval_iterator = 1
@@ -172,15 +165,14 @@ def detect_ovals(img, screen: Screen):
     #print(len(ovals))
 
 def detect_objects(screen: Screen, timestamp: int):
-    measure_list = []
+    measure_list: list[Measure] = []
+    entitiesStore.current_timestamp = timestamp
     oval: Oval
     for oval in screen.oval_list:
         measure = Measure(oval)
         oval.measureRef = measure
         measure_list.append(measure)
-        #creating entities
-        #creating predicted positions
-        #assiocations
+    screen.set_Measure_list(measure_list)
     if(timestamp == 0):
         stateCollection.clear()
         entitiesStore.clear()
@@ -188,8 +180,8 @@ def detect_objects(screen: Screen, timestamp: int):
         measure: Measure
         for measure in measure_list:
             new_entitie = Entitie()
-            new_entitie.add_pair(measure,timestamp)
-            entitiesStore.addEntitie(new_entitie)
+            #entitiesStore.addEntitie(new_entitie)
+            entitiesStore.updateEntitie(new_entitie,measure,timestamp)
         #print("new entities")
         #for entitie in entitiesStore.entitieList:
             #print(entitie)
@@ -200,38 +192,33 @@ def detect_objects(screen: Screen, timestamp: int):
         for measure in measure_list:
             log_file.write("measure "+str(measure.ovalRef.id)+" : ("+str(measure.average_x)+","+str(measure.average_y)+")\n")
         log_file.write("entities from timestamp: "+str(timestamp-1)+"\n")
-        for entitie in entitiesStore.entitieList:
-            log_file.write("entitie "+str(entitie.measuretuple[0][0].ovalRef.id)+" : ("+str(entitie.last_position)+") \n")
+        for entitie in entitiesStore.get_entities_by_timestamp(timestamp-1):
+            log_file.write("entitie "+str(entitie.id)+" : ("+str(entitie.last_position)+") \n")
         for measure in measure_list:
-            for entitie in entitiesStore.entitieList:
-                #print("adding assiocation")
-                #print(entitie)
+            for entitie in entitiesStore.get_entities_by_timestamp(timestamp-1):
                 probability = ProbabilityDensityDistribution(entitie,measure.average_x,measure.average_y)
                 if(probability.value >= 0.05):
                     assiocations.assiocationList.append(Assiocation(probability,entitie,measure))
-        assiocation: Assiocation
-        #assiocation: Assiocation
-        #for assiocation in assiocations.assiocationList:
-            #print(assiocation)
-            #print("entitie measure: ",assiocation.entity.measuretuple[0])
+
         assiocations.sort_list()
         assiocations.create_entitie_measure_list()
         log_file.write("assiocations (entitie.id, measure.id, probability)\n")
+        assiocation: Assiocation
         for assiocation in assiocations.assiocationList:
-            log_file.write("Assiocation ("+str(assiocation.entity.measuretuple[0][0].ovalRef.id)+" , "+str(assiocation.measure.ovalRef.id)+" , "+str(assiocation.densitydistribution.value)+")\n")
+            log_file.write("Assiocation ("+str(assiocation.entity.id)+" , "+str(assiocation.measure.ovalRef.id)+" , "+str(assiocation.densitydistribution.value)+")\n")
         log_file.write("assiocations entitie measure list\n")
         for assiocation in [x[0] for x in assiocations.EntitieMeasureList]:
-            log_file.write("Assiocation ("+str(assiocation.entity.measuretuple[0][0].ovalRef.id)+" , "+str(assiocation.measure.ovalRef.id)+" , "+str(assiocation.densitydistribution.value)+")\n")
-        input("pause")
+            log_file.write("Assiocation ("+str(assiocation.entity.id)+" , "+str(assiocation.measure.ovalRef.id)+" , "+str(assiocation.densitydistribution.value)+")\n")
+        #input("pause")
         global_probability = GlobalAssiocation(assiocations).calc_global_probability()
-
+        print(f"timestamp: {timestamp} completed \n")
         #select all measurements that are not in global chain - it will be new entities
         global_chain_measurements = []
 
-        assiocations_iterator = assiocations
+        assiocations_iterator:Assiocations = assiocations
         while assiocations_iterator.nextElement:
             global_chain_measurements.append(assiocations_iterator.assiocationList[0].measure)
-            assiocations_iterator.assiocationList[0].entitie.add_pair(assiocations_iterator.assiocationList[0].measure,timestamp)
+            entitiesStore.updateEntitie(assiocations_iterator.assiocationList[0].entity,assiocations_iterator.assiocationList[0].measure,timestamp)
             log_file.write(str(assiocations_iterator))
             assiocations_iterator = assiocations_iterator.nextElement
         
@@ -240,8 +227,10 @@ def detect_objects(screen: Screen, timestamp: int):
             if measure not in global_chain_measurements:
                 # create new entitie
                 new_entitie = Entitie()
-                new_entitie.add_pair(measure,timestamp)
-                entitiesStore.addEntitie(new_entitie)
+                #entitiesStore.addEntitie(new_entitie)
+                entitiesStore.updateEntitie(new_entitie,measure,timestamp)
+        
+        assiocations.clear()
 
 
 
@@ -262,6 +251,18 @@ def process_images(image_paths):
         stateCollection.add_state(new_screen,entitiesStore.createMemento())
         iterator += 1
 
+def draw_entitie_line(draw: ImageDraw, entitie: Entitie) -> None:
+    measureT: tuple[Measure,int]
+    previousMeasureT: tuple[Measure,int] = None
+    entitie.measuretuple.sort(key=lambda x: x[1])
+    for measureT in entitie.measuretuple:
+        if previousMeasureT != None:
+            # draw only dot
+            lineStartPoint = (previousMeasureT[0].average_x,previousMeasureT[0].average_y)
+            lineEndPoint = (measureT[0].average_x,measureT[0].average_y)
+            draw.line((lineStartPoint[0],lineStartPoint[1],lineEndPoint[0],lineEndPoint[1]), fill='black')
+        draw.ellipse((measureT[0].average_x - 1, measureT[0].average_y-1, measureT[0].average_x+1, measureT[0].average_y+1),fill='black')
+        previousMeasureT = measureT
 
 def browse_image():
     file_paths = filedialog.askopenfilenames(filetypes=[("PNG files", "*.png")])
@@ -270,10 +271,13 @@ def browse_image():
 
         while True:  # Loop through screens indefinitely
             current_screen = stateCollection.get_current_screen()
+            current_entities = stateCollection.get_current_entities()
             result_image = Image.open(current_screen.path)
             draw = ImageDraw.Draw(result_image)
 
-            draw_rectangles(draw, current_screen)
+            #draw_rectangles(draw, current_screen)
+            for entitie in current_entities.get_entities_by_timestamp(current_entities.current_timestamp):
+                draw_entitie_line(draw,entitie)
 
             tk_img = ImageTk.PhotoImage(result_image)
             canvas.config(width=result_image.width, height=result_image.height)
@@ -281,7 +285,8 @@ def browse_image():
             canvas.image = tk_img
 
             root.update()
-            input("wpisz cokolwiek, by kontynuowac")
+            sleep(0.5)
+            #input("wpisz cokolwiek, by kontynuowac")
 
             stateCollection.switch_to_next_screen()  # Switch to the next screen
 
