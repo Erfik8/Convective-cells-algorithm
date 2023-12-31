@@ -1,215 +1,147 @@
+from __future__ import annotations
 from PIL import Image, ImageTk, ImageDraw
 import tkinter as tk
 from tkinter import filedialog
 import copy
-from abc import ABC, abstractclassmethod
 from time import sleep
 from operator import sub
 import math
+from Copyable import Copyable
+from Elements import Oval, Measure
+from Entitie import *
+from Screen import Screen
+from State import StateCollection  
+from ProbabilityDensityDistribution import ProbabilityDensityDistribution
+from Printable import Printable
+import time
 
-class Copyable(ABC):
-    @abstractclassmethod
-    def __copy__(self):
-        pass
 
-    @abstractclassmethod
-    def __deepcopy__(self, memo):
-        pass
-class Oval(Copyable):
-    pass
-
-class Oval(Copyable):
-    pixels: list
-    def __init__(self) -> None:
-        self.pixels = []
-        self.x_min = -1
-        self.x_max = -1
-        self.y_min = -1
-        self.y_max = -1
-        self.measureRef = None
+class Assiocation(Printable):
+    def __init__(self, densitydistribution, entitie, measure) -> None:
+        self.densitydistribution: ProbabilityDensityDistribution = densitydistribution
+        self.entity: Entitie = entitie
+        self.measure: Measure = measure
     
-    def set_pixels_collection(self,pixels_collection:list):
-        self.pixels = copy.deepcopy(pixels_collection)
-
-    def update_measure_ref(self,measureRef):
-        self.measureRef = measureRef
-
-    def calculate_oval_bounding_box(self):
-        for coords in self.pixels:
-            if (self.x_min < 0 or coords[0] < self.x_min):
-                self.x_min = coords[0]
-            if (self.x_max < 0 or coords[0] > self.x_max):
-                self.x_max = coords[0]
-            if (self.y_min < 0 or coords[1] < self.y_min):
-                self.y_min = coords[1]
-            if (self.y_max < 0 or coords[1] > self.y_max):
-                self.y_max = coords[1]
-    def get_rectangle_bounding_box(self):
-        return (self.x_min, self.y_min, self.x_max, self.y_max)
+    def get_distribution(self) -> float:
+        return self.densitydistribution.value
     
-    def __copy__(self):
-        return self
-    def __deepcopy__(self, memo):
-        new_oval = Oval()
-        new_oval.set_pixels_collection(self.pixels)
-        new_oval.calculate_oval_bounding_box()
-        new_oval.measureRef = self.measureRef
-        return new_oval
-
-    def __eq__(self, value: Oval) -> bool:
-        temp_list_is_equals = set(self.pixels) == set(value.pixels)
-        return self.measureRef == value.measureRef and self.x_max == value.x_max and self.x_min == value.x_min and self.y_min == value.y_min and self.y_max == value.y_max and temp_list_is_equals
+    def __repr__(self) -> str:
+        return f"Assiocation(densityDistribution: {repr(self.densitydistribution)}, entity: {repr(self.entity)}, measure: {repr(self.measure)})"
     
-class Measure(Copyable):
-    def __init__(self, ovalRef: Oval) -> None:
-        self.ovalRef = ovalRef
-        self.average_x = 0
-        self.absoluteErr_x = 0
-        self.average_y = 0
-        self.absoluteErr_y = 0
-        self.calc_average()
-        self.calc_error()
-    def calc_average(self):
-        count = len(self.ovalRef.pixels)
-        for pixel in self.ovalRef.pixels:
-            self.average_x += pixel[0]
-            self.average_y += pixel[1]
-        self.average_x /= count
-        self.average_x /= count
-    def calc_error(self):
-        if (self.average_x == 0 or self.average_y == 0):
-            return 
-        count = len(self.ovalRef.pixels)
-        for pixel in self.ovalRef.pixels:
-            self.absoluteErr_x += ((pixel[0] - self.average_x)**2)/count
-            self.absoluteErr_y += ((pixel[1] - self.average_y)**2)/count
-        self.absoluteErr_x = math.sqrt(self.absoluteErr_x)
-        self.absoluteErr_y = math.sqrt(self.absoluteErr_y)
-    
-    def __copy__(self):
-        return self
-    
-    def __deepcopy__(self,memo):
-        new_measure = Measure(self.ovalRef)
-        new_measure.average_x = self.average_x
-        new_measure.average_y = self.average_y
-        new_measure.absoluteErr_x = self.absoluteErr_x
-        new_measure.absoluteErr_y = self.absoluteErr_y
-        return new_measure
-        
+    def __str__(self) -> str:
+        return f"""Assciocation (  
+        \t densityValue: {self.densitydistribution} 
+        \t entity: {str(self.entity)} 
+        \t measure: {str(self.measure)}  
+        )"""
 
-class Entitie(Copyable):
-    def __init__(self) -> None:
-        self.measuretuple = []
-        self.motion_vector = (0,0)
-        self.last_position = (0,0)
-        self.last_position_error = (0,0)
-    def add_pair(self,measure: Measure, timestamp: int):
-        self.measuretuple.append((measure,timestamp))
-    def is_empty(self):
-        if not self.measuretuple:
-            return True
-        return False
-    def update_last_position(self):
-        if not self.measuretuple:
-            return 
-        last_measure: Measure
-        last_measure = self.measuretuple[-1][0]
-        if(self.last_position[0] != last_measure.average_x or self.last_position[1] != last_measure.average_y):
-            self.last_position = (last_measure.average_x,last_measure.average_y)
-            self.last_position_error = (last_measure.absoluteErr_x,last_measure.absoluteErr_y)
-            if(len(self.measuretuple) == 1):
-                return 
-            new_motion_vector = tuple(map(sub, zip(self.measuretuple[-1],self.measuretuple[-2])))
-            self.motion_vector = ((self.motion_vector[0] + new_motion_vector[0])/2,(self.motion_vector[1] + new_motion_vector[1])/2)
-
-    def predicted_position(self):
-        predicted_position = tuple(map(sum, zip(self.last_position, self.motion_vector)))
-        return (predicted_position[0],predicted_position[1],self.last_position_error[0],self.last_position_error[1])
-    def __copy__(self):
-        return self
-    def __deepcopy__(self,memo):
-        new_entitie = Entitie()
-        new_entitie.measuretuple = copy.deepcopy(self.measuretuple)
-        return new_entitie
+class Assiocations(Printable):
+    def __init__(self, parentElement: Assiocation = None) -> None:
+        self.assiocationList: list[Assiocation] = []
+        self.EntitieMeasureList: list[tuple[Assiocation,int]] = []
+        self.parentElement: Assiocations = parentElement
+        self.nextElement: Assiocations = None
     
-class EntitiesStoreMemento:
-    pass
+    def create_list(self):
+        if self.parentElement == None:
+            return
+        previousAssiocationList = self.parentElement.assiocationList
+        previousEntity: Entitie = self.parentElement.assiocationList[0].entity
+        assiocation: Assiocation
+        for assiocation in previousAssiocationList:
+            if(assiocation.entity != previousEntity):
+                self.assiocationList.append(assiocation)
+        #self.sort_list()
 
-class EntitiesStore(Copyable):
-    def __init__(self) -> None:
-        self.entitieList = []
-        self.actual_timestamp = 0
-    def updateEntitie(self, entitie: Entitie, new_measure: Measure, timestamp: int):
-        if entitie.is_empty() or self.entitieList.index(entitie) == ValueError:
-            entitie.add_pair(new_measure,timestamp)
-            self.entitieList.append(entitie)
+    def create_entitie_measure_list(self):
+        if not self.assiocationList:
+            pass
         else:
-            index_of_entity = self.entitieList.index(entitie)
-            self.entitieList[index_of_entity].measuretuple.add_pair(new_measure,timestamp)
-    def addEntitie(self, new_entitie: Entitie):
-        self.entitieList.append(new_entitie)
-    def createMemento(self):
-        return EntitiesStoreMemento(self,self.entitieList,self.actual_timestamp)
+            self.EntitieMeasureList = list(filter(lambda x: x.entity == self.assiocationList[0].entity,self.assiocationList))
+            self.EntitieMeasureList = [[x,0] for x in self.EntitieMeasureList]
+
+    def sort_list(self):
+        self.assiocationList.sort(key=lambda x: x.get_distribution(),reverse=True)
     
-    def __copy__(self):
-        return self
-    def __deepcopy__(self, memo):
-        new_entitieStore = EntitiesStore()
-        new_entitieStore.entitieList = copy.deepcopy(self.entitieList)
-        new_entitieStore.actual_timestamp = self.actual_timestamp
-        return new_entitieStore
+    def clear(self) -> None:
+        self.assiocationList.clear()
 
-class EntitiesStoreMemento:
-    entitiesStoreRef: EntitiesStore
-    def __init__(self, entitieStoreRef, entitieList, timestamp) -> None:
-        self.entitiesStoreRef = entitieStoreRef
-        self.entitieList = copy.deepcopy(entitieList)
-        self.actual_timestamp = timestamp
-    def restore(self):
-        self.entitiesStoreRef.entitieList = copy.deepcopy(self.entitieList)
-        self.entitiesStoreRef.actual_timestamp = copy.deepcopy(self.actual_timestamp)
+    def __repr__(self) -> str:
+        return f"Assiocations(assiocationList: list(Assiocation), EntitieMeasureList: list(tuple(Assiocation,int)), parentElement: {repr(self.parentElement)}, nextElement: {repr(self.nextElement)}"
     
-class Screen:
-    def __init__(self, path, timestamp) -> None:
-        self.path = path
-        self.oval_list = []
-        self.measures = []
-        self.timestamp = timestamp
+    def __str__(self) -> str:
+        return f"""Assiocations ( 
+        \t parent: {'Assiocations' if self.parentElement else 'None'} 
+        \t next: {'Assiocations' if self.nextElement else 'None'} 
+        \t Assiocations number: {len(self.assiocationList)} 
+        \t entity: {str(self.assiocationList[0])} 
+        \t entities measure list number: {len(self.EntitieMeasureList)} 
+        )"""
+    
 
-    def set_Oval_list(self, oval_list: list):
-        self.oval_list = copy.deepcopy(oval_list)
+class GlobalAssiocation:
+    def __init__(self, assiocations: Assiocations) -> None:
+        self.assiocations: Assiocations = assiocations
+    
+    def calc_global_probability(self):
+        best_assiocation: Assiocation = None
+        best_probability: int = -1
+        new_assiocation: Assiocations = None
+        #print("entitie table size: ",len(self.assiocations.EntitieMeasureList))
+        for assiocation in self.assiocations.EntitieMeasureList:
+            new_assiocation = Assiocations(self.assiocations)
+            # print("create assiocations list")
+            new_assiocation.create_list()
+            new_assiocation.assiocationList = list(filter(lambda x: x.measure != assiocation[0].measure, new_assiocation.assiocationList))
+            # print("create entities list")
+            new_assiocation.create_entitie_measure_list()
+            new_global_assiocation = GlobalAssiocation(new_assiocation)
+            probability = new_global_assiocation.calc_global_probability()
+            if(probability > best_probability):
+                best_probability = probability
+                best_assiocation = new_assiocation
+            assiocation[1] = probability
+            if(self.assiocations.parentElement == None):
+                #log_file.write("global probability for assciocation: "+str(assiocation))
+                #log_file.write("blobal probability: "+str(assiocation[1]))
+                pass
+        if(best_probability < 0):
+            return 1
+        self.assiocations.nextElement = best_assiocation
+        return self.assiocations.assiocationList[0].densitydistribution.value*best_probability
 
-class StateCollection:
-    def __init__(self) -> None:
-        self.states = []
-        self.screen_width = 0
-        self.screen_height = 0
-        self.current_screen_index = 0  # Added to keep track of the current screen index
+# first element of list is subglobal probability of subchain
+# second element is subchain - it is a list of indexes
+def find_global_probability_in_dict(dict: list[list[int,list[Assiocation]]],row: int, measure_list: list) -> list[float,list[Assiocation]]:
+    if(row >= len(dict)):
+        return [1,[]]
+    best_probability = -1
+    bestsubchain = []
+    best_assiocation = None
+    for entity_assiocations in dict[row][1]:
+        if(entity_assiocations.measure in measure_list):
+            continue
+        new_measure_list = copy.copy(measure_list)
+        new_measure_list.append(entity_assiocations.measure)
+        probability, subchain = find_global_probability_in_dict(dict,row+1,new_measure_list)
+        if(probability > best_probability):
+            best_probability = probability
+            bestsubchain = subchain
+            best_assiocation = entity_assiocations
+    if best_probability == -1 or best_assiocation == None:
+        #end of chain reached - return chain probability (chain length/dict length)
+        return [(row-1)/len(dict)**2,[]]
+    else:
+        bestsubchain.append(best_assiocation)
+        return [best_probability*best_assiocation.densitydistribution.value,bestsubchain]
 
-    def add_state(self,screen: Screen,entities: EntitiesStoreMemento):
-        if(self.screen_height != 0 or self.screen_width != 0):
-            img = Image.open(screen.path)
-            if(img.width != self.screen_width or img.height != self.screen_height):
-                print("Images have different dimensions")
-                exit(1)
-            else:
-                self.states.append((screen,entities))
-        else:
-            self.states.append((screen,entities))
-            img = Image.open(screen.path)
-            self.screen_height = img.height
-            self.screen_width = img.width
 
-    def get_current_screen(self):
-        return self.states[self.current_screen_index][0]
-
-    def switch_to_next_screen(self):
-        self.current_screen_index = (self.current_screen_index + 1) % len(self.states)
 
     
 stateCollection = StateCollection()
 entitiesStore = EntitiesStore()
+assiocations = Assiocations()
+log_file = open("log-"+time.strftime("%H-%M-%S",time.localtime())+".txt","w")
 
 
 def get_pixels_in_oval(img_ref:Image, oval_pixel_list: list, x_center: int, y_center:int ):
@@ -228,11 +160,9 @@ def get_pixels_in_oval(img_ref:Image, oval_pixel_list: list, x_center: int, y_ce
                 continue
             if(y < 0 or y >= img_ref.size[1]):
                 continue
-            #if(img_ref.getpixel((x,y)) == img_ref.getpixel((x_center,y_center)) and (x,y) not in oval_pixel_list):
             if((x,y) not in oval_pixel_list):
                 get_pixels_in_oval(img_ref,oval_pixel_list,x,y)
-
-
+                
 def is_in_any_oval(pixel_coords, ovals):
     oval: Oval
     for oval in ovals:
@@ -241,49 +171,159 @@ def is_in_any_oval(pixel_coords, ovals):
     return False
 
 
-def detect_ovals(img, screen: Screen):
+def detect_ovals(img: Image, screen: Screen):
     width, height = img.size
     ovals = []
+    oval_iterator = 1
 
     for x in range(width):
         for y in range(height):
             pixel = img.getpixel((x, y))
             if pixel != (255,255,255,255):  # Check if the pixel is not fully transparent
                 if (is_in_any_oval((x,y),ovals) == False):
-                    oval_object = Oval()
+                    oval_object = Oval(str(oval_iterator))
                     oval_pixel_list = []
                     get_pixels_in_oval(img,oval_pixel_list,x,y)
                     oval_object.set_pixels_collection(oval_pixel_list)
                     oval_object.calculate_oval_bounding_box()
                     ovals.append(oval_object)
+                    oval_iterator = oval_iterator+1
     screen.set_Oval_list(ovals)                 
-    print(len(ovals))
+    #print(len(ovals))
 
-def detect_objects(screen: Screen):
+def detect_objects(screen: Screen, timestamp: int):
+    measure_list: list[Measure] = []
+    entitiesStore.current_timestamp = timestamp
     oval: Oval
     for oval in screen.oval_list:
         measure = Measure(oval)
         oval.measureRef = measure
+        measure_list.append(measure)
+    screen.set_Measure_list(measure_list)
+    if(timestamp == 0):
+        stateCollection.clear()
+        entitiesStore.clear()
+    if(stateCollection.is_empty()):
+        measure: Measure
+        for measure in measure_list:
+            new_entitie = Entitie()
+            #entitiesStore.addEntitie(new_entitie)
+            entitiesStore.updateEntitie(new_entitie,measure,timestamp)
+        #print("new entities")
+        #for entitie in entitiesStore.entitieList:
+            #print(entitie)
+    else:
+        measure: Measure
+        entitie: Entitie
+        log_file.write("measures for timestamp: "+str(timestamp)+"\n")
+        for measure in measure_list:
+            log_file.write("measure "+str(measure.ovalRef.id)+" : ("+str(measure.average_x)+","+str(measure.average_y)+")\n")
+        log_file.write("entities from timestamp: "+str(timestamp-1)+"\n")
+        for entitie in entitiesStore.get_entities_by_timestamp(timestamp-1):
+            log_file.write("entitie "+str(entitie.id)+" : ("+str(entitie.last_position)+") \n")
+        for measure in measure_list:
+            for entitie in entitiesStore.get_entities_by_timestamp(timestamp-1):
+                probability = ProbabilityDensityDistribution(entitie,measure)
+                if(probability.value >= 0.05):
+                    assiocations.assiocationList.append(Assiocation(probability,entitie,measure))
+
+        assiocation_dict: list[list[int,list[Assiocation]]] = []
+        print("assiocations list size: ",str(len(assiocations.assiocationList)))
+        for entitie in entitiesStore.get_entities_by_timestamp(timestamp-1):
+            assiocation_dict.append([entitie.id,[x for x in assiocations.assiocationList if x.entity.id == entitie.id]])
+            assiocation_dict[-1][1].sort(key=lambda x: x.get_distribution(),reverse=True)
+            print(f"id: {entitie.id} list size: {len(assiocation_dict[-1][1])} biggest probability: {0 if len(assiocation_dict[-1][1]) == 0 else assiocation_dict[-1][1][0].densitydistribution.value}")
+        
+
+        assiocation_dict.sort(key=lambda x: 0 if len(x[1]) == 0 else x[1][0].densitydistribution.value,reverse=True)
+
+        probability, chain = find_global_probability_in_dict(assiocation_dict,0,[])
+
+        for assiocation in chain:
+            print(("Assiocation ("+str(assiocation.entity.id)+" , "+str(assiocation.measure.ovalRef.id)+" , "+str(assiocation.densitydistribution.value)+")\n"))
+
+        global_chain_measurements = []
+
+        assiocation_iterator:Assiocation
+        for assiocation_iterator in chain:
+            global_chain_measurements.append(assiocation_iterator.measure)
+            entitiesStore.updateEntitie(assiocation_iterator.entity,assiocation_iterator.measure,timestamp)
+            log_file.write(str(assiocation_iterator))
+
+        measure: Measure
+        for measure in measure_list:
+            if measure not in global_chain_measurements:
+                # create new entitie
+                new_entitie = Entitie()
+                #entitiesStore.addEntitie(new_entitie)
+                entitiesStore.updateEntitie(new_entitie,measure,timestamp)
+
+        assiocations.clear()
+
+        #input("pause")
+#
+#        assiocations.sort_list()
+#        assiocations.create_entitie_measure_list()
+#        log_file.write("assiocations (entitie.id, measure.id, probability)\n")
+#        assiocation: Assiocation
+#        for assiocation in assiocations.assiocationList:
+#            log_file.write("Assiocation ("+str(assiocation.entity.id)+" , "+str(assiocation.measure.ovalRef.id)+" , "+str(assiocation.densitydistribution.value)+")\n")
+#        log_file.write("assiocations entitie measure list\n")
+#        for assiocation in [x[0] for x in assiocations.EntitieMeasureList]:
+#            log_file.write("Assiocation ("+str(assiocation.entity.id)+" , "+str(assiocation.measure.ovalRef.id)+" , "+str(assiocation.densitydistribution.value)+")\n")
+#        #input("pause")
+#        global_probability = GlobalAssiocation(assiocations).calc_global_probability()
+#        print(f"timestamp: {timestamp} completed \n")
+#        #select all measurements that are not in global chain - it will be new entities
+#        global_chain_measurements = []
+#
+#        assiocations_iterator:Assiocations = assiocations
+#        while assiocations_iterator.nextElement:
+#            global_chain_measurements.append(assiocations_iterator.assiocationList[0].measure)
+#            entitiesStore.updateEntitie(assiocations_iterator.assiocationList[0].entity,assiocations_iterator.assiocationList[0].measure,timestamp)
+#            log_file.write(str(assiocations_iterator))
+#            assiocations_iterator = assiocations_iterator.nextElement
+#        
+#        measure: Measure
+#        for measure in measure_list:
+#            if measure not in global_chain_measurements:
+#                # create new entitie
+#                new_entitie = Entitie()
+#                #entitiesStore.addEntitie(new_entitie)
+#                entitiesStore.updateEntitie(new_entitie,measure,timestamp)
+#        
 
 
 
 def draw_rectangles(draw,screen: Screen):
     rect: Oval
     for rect in screen.oval_list:
-        print(rect.get_rectangle_bounding_box())
+        #print(rect.get_rectangle_bounding_box())
         draw.rectangle(rect.get_rectangle_bounding_box(), outline="red", width=1)
 
 def process_images(image_paths):
     iterator = 0
+    image_path: str
     for image_path in image_paths:
         new_screen = Screen(image_path, iterator)
         img = Image.open(new_screen.path)
         detect_ovals(img,new_screen)
-        new_entetie = Entitie()
-        entitiesStore.addEntitie(new_entetie)
+        detect_objects(new_screen,iterator)
         stateCollection.add_state(new_screen,entitiesStore.createMemento())
         iterator += 1
 
+def draw_entitie_line(draw: ImageDraw, entitie: Entitie) -> None:
+    measureT: tuple[Measure,int]
+    previousMeasureT: tuple[Measure,int] = None
+    entitie.measuretuple.sort(key=lambda x: x[1])
+    for measureT in entitie.measuretuple:
+        if previousMeasureT != None:
+            # draw only dot
+            lineStartPoint = (previousMeasureT[0].average_x,previousMeasureT[0].average_y)
+            lineEndPoint = (measureT[0].average_x,measureT[0].average_y)
+            draw.line((lineStartPoint[0],lineStartPoint[1],lineEndPoint[0],lineEndPoint[1]), fill='black')
+        draw.ellipse((measureT[0].average_x - 1, measureT[0].average_y-1, measureT[0].average_x+1, measureT[0].average_y+1),fill='black')
+        previousMeasureT = measureT
 
 def browse_image():
     file_paths = filedialog.askopenfilenames(filetypes=[("PNG files", "*.png")])
@@ -292,10 +332,13 @@ def browse_image():
 
         while True:  # Loop through screens indefinitely
             current_screen = stateCollection.get_current_screen()
+            current_entities = stateCollection.get_current_entities()
             result_image = Image.open(current_screen.path)
             draw = ImageDraw.Draw(result_image)
 
-            draw_rectangles(draw, current_screen)
+            #draw_rectangles(draw, current_screen)
+            for entitie in current_entities.get_entities_by_timestamp(current_entities.current_timestamp):
+                draw_entitie_line(draw,entitie)
 
             tk_img = ImageTk.PhotoImage(result_image)
             canvas.config(width=result_image.width, height=result_image.height)
@@ -304,6 +347,7 @@ def browse_image():
 
             root.update()
             sleep(0.5)
+            #input("wpisz cokolwiek, by kontynuowac")
 
             stateCollection.switch_to_next_screen()  # Switch to the next screen
 

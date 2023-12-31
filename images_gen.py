@@ -31,10 +31,10 @@ class Constants(Singleton):
         self._AREA_OFFSET_X = 5
         self._AREA_OFFSET_Y = 5
         self._SCALE_FACTOR = 20
-        self._POPULATION_COUNT = 60
+        self._POPULATION_COUNT = 35
         self._FRAMES_PER_SEC = 40
         self._NEW_POPULATION_FACTOR = 0.08
-        self._START_POPULATION = 40
+        self._START_POPULATION = 10
         self._INFECTION_PROBAILLITY = 0.1
         self._TIME_TO_INFECT = 1
         self._INFECTION_RADIUS = 2
@@ -171,8 +171,8 @@ class Tkwindow():
         self.canvas.move(person.point_object_ID,
                          person.velocity.getComponents()[0],person.velocity.getComponents()[1])
         new_coords = list(self.canvas.coords(person.point_object_ID))
-        new_coords[2] += (-0.5)+random.random()
-        new_coords[3] += (-0.5)+random.random()
+        #new_coords[2] += (-0.5)+random.random()
+        #new_coords[3] += (-0.5)+random.random()
         self.canvas.coords(person.point_object_ID,*new_coords)
         self.update_person_infection(person)
     def update_person_infection(self, person: Person):
@@ -188,11 +188,14 @@ class Tkwindow():
         x,y = person.location.getComponents()
         return self.canvas.create_oval(x * _constants._SCALE_FACTOR,
                                         y * _constants._SCALE_FACTOR,
-                                          x * _constants._SCALE_FACTOR + 7 + random.random()*13,
-                                            y * _constants._SCALE_FACTOR + 7 + random.random()*13,
+                                          x * _constants._SCALE_FACTOR + 14 + random.random()*10,
+                                            y * _constants._SCALE_FACTOR + 14 + random.random()*10,
                                               fill="blue")
     def remove_person_oval(self, person: Person):
         self.canvas.delete(person.point_object_ID)
+
+    def get_person_oval_coords(self,person: Person):
+        return list(self.canvas.coords(person.point_object_ID))
     
 
 class Simulation():
@@ -249,10 +252,11 @@ class Simulation():
             #print("i = ",i," len = ",len(self.population))
             self.population[i].update_position()
             self.tkwindow.update_person(self.population[i])
+            person_oval_coords = self.tkwindow.get_person_oval_coords(self.population[i])
             if (self.population[i].location.getComponents()[0] < 0 or
-                self.population[i].location.getComponents()[0] >  _constants._AREA_WIDTH or
+                self.population[i].location.getComponents()[0] + (person_oval_coords[2] - person_oval_coords[0])/_constants._SCALE_FACTOR>  _constants._AREA_WIDTH or
                 self.population[i].location.getComponents()[1] < 0 or
-                self.population[i].location.getComponents()[1] > _constants._AREA_HEIGHT):
+                self.population[i].location.getComponents()[1] + (person_oval_coords[3] - person_oval_coords[1])/_constants._SCALE_FACTOR > _constants._AREA_HEIGHT):
                     temp = random.random()
                     if(temp < 0.0):
                         if(self.population[i].location.getComponents()[0] < 0 or self.population[i].location.getComponents()[0] > _constants._AREA_WIDTH):
@@ -291,7 +295,7 @@ class Simulation():
             self.simulation_time += 1
             if(len(self.population) < _constants._POPULATION_COUNT):
                 for i in range(0,_constants._POPULATION_COUNT - len(self.population)):
-                    if(random.random()<0.5):
+                    if(random.random()<_constants._NEW_POPULATION_FACTOR):
                         self.add_new_person()
         self.tkwindow.root.after(int(1000/_constants._FRAMES_PER_SEC), self.update, iterator+1)
     def run(self):
