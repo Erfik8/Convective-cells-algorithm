@@ -110,6 +110,33 @@ class GlobalAssiocation:
         self.assiocations.nextElement = best_assiocation
         return self.assiocations.assiocationList[0].densitydistribution.value*best_probability
 
+# first element of list is subglobal probability of subchain
+# second element is subchain - it is a list of indexes
+def find_global_probability_in_dict(dict: list[list[int,list[Assiocation]]],row: int, measure_list: list) -> list[float,list[Assiocation]]:
+    if(row >= len(dict)):
+        return [1,[]]
+    best_probability = -1
+    bestsubchain = []
+    best_assiocation = None
+    for entity_assiocations in dict[row][1]:
+        if(entity_assiocations.measure in measure_list):
+            continue
+        new_measure_list = copy.copy(measure_list)
+        new_measure_list.append(entity_assiocations.measure)
+        probability, subchain = find_global_probability_in_dict(dict,row+1,new_measure_list)
+        if(probability > best_probability):
+            best_probability = probability
+            bestsubchain = subchain
+            best_assiocation = entity_assiocations
+    if best_probability == -1 or best_assiocation == None:
+        #end of chain reached - return chain probability (chain length/dict length)
+        return [(row-1)/len(dict)**2,[]]
+    else:
+        bestsubchain.append(best_assiocation)
+        return [best_probability*best_assiocation.densitydistribution.value,bestsubchain]
+
+
+
     
 stateCollection = StateCollection()
 entitiesStore = EntitiesStore()
@@ -196,32 +223,33 @@ def detect_objects(screen: Screen, timestamp: int):
             log_file.write("entitie "+str(entitie.id)+" : ("+str(entitie.last_position)+") \n")
         for measure in measure_list:
             for entitie in entitiesStore.get_entities_by_timestamp(timestamp-1):
-                probability = ProbabilityDensityDistribution(entitie,measure.average_x,measure.average_y)
+                probability = ProbabilityDensityDistribution(entitie,measure)
                 if(probability.value >= 0.05):
                     assiocations.assiocationList.append(Assiocation(probability,entitie,measure))
 
-        assiocations.sort_list()
-        assiocations.create_entitie_measure_list()
-        log_file.write("assiocations (entitie.id, measure.id, probability)\n")
-        assiocation: Assiocation
-        for assiocation in assiocations.assiocationList:
-            log_file.write("Assiocation ("+str(assiocation.entity.id)+" , "+str(assiocation.measure.ovalRef.id)+" , "+str(assiocation.densitydistribution.value)+")\n")
-        log_file.write("assiocations entitie measure list\n")
-        for assiocation in [x[0] for x in assiocations.EntitieMeasureList]:
-            log_file.write("Assiocation ("+str(assiocation.entity.id)+" , "+str(assiocation.measure.ovalRef.id)+" , "+str(assiocation.densitydistribution.value)+")\n")
-        #input("pause")
-        global_probability = GlobalAssiocation(assiocations).calc_global_probability()
-        print(f"timestamp: {timestamp} completed \n")
-        #select all measurements that are not in global chain - it will be new entities
+        assiocation_dict: list[list[int,list[Assiocation]]] = []
+        print("assiocations list size: ",str(len(assiocations.assiocationList)))
+        for entitie in entitiesStore.get_entities_by_timestamp(timestamp-1):
+            assiocation_dict.append([entitie.id,[x for x in assiocations.assiocationList if x.entity.id == entitie.id]])
+            assiocation_dict[-1][1].sort(key=lambda x: x.get_distribution(),reverse=True)
+            print(f"id: {entitie.id} list size: {len(assiocation_dict[-1][1])} biggest probability: {0 if len(assiocation_dict[-1][1]) == 0 else assiocation_dict[-1][1][0].densitydistribution.value}")
+        
+
+        assiocation_dict.sort(key=lambda x: 0 if len(x[1]) == 0 else x[1][0].densitydistribution.value,reverse=True)
+
+        probability, chain = find_global_probability_in_dict(assiocation_dict,0,[])
+
+        for assiocation in chain:
+            print(("Assiocation ("+str(assiocation.entity.id)+" , "+str(assiocation.measure.ovalRef.id)+" , "+str(assiocation.densitydistribution.value)+")\n"))
+
         global_chain_measurements = []
 
-        assiocations_iterator:Assiocations = assiocations
-        while assiocations_iterator.nextElement:
-            global_chain_measurements.append(assiocations_iterator.assiocationList[0].measure)
-            entitiesStore.updateEntitie(assiocations_iterator.assiocationList[0].entity,assiocations_iterator.assiocationList[0].measure,timestamp)
-            log_file.write(str(assiocations_iterator))
-            assiocations_iterator = assiocations_iterator.nextElement
-        
+        assiocation_iterator:Assiocation
+        for assiocation_iterator in chain:
+            global_chain_measurements.append(assiocation_iterator.measure)
+            entitiesStore.updateEntitie(assiocation_iterator.entity,assiocation_iterator.measure,timestamp)
+            log_file.write(str(assiocation_iterator))
+
         measure: Measure
         for measure in measure_list:
             if measure not in global_chain_measurements:
@@ -229,8 +257,41 @@ def detect_objects(screen: Screen, timestamp: int):
                 new_entitie = Entitie()
                 #entitiesStore.addEntitie(new_entitie)
                 entitiesStore.updateEntitie(new_entitie,measure,timestamp)
-        
+
         assiocations.clear()
+
+        #input("pause")
+#
+#        assiocations.sort_list()
+#        assiocations.create_entitie_measure_list()
+#        log_file.write("assiocations (entitie.id, measure.id, probability)\n")
+#        assiocation: Assiocation
+#        for assiocation in assiocations.assiocationList:
+#            log_file.write("Assiocation ("+str(assiocation.entity.id)+" , "+str(assiocation.measure.ovalRef.id)+" , "+str(assiocation.densitydistribution.value)+")\n")
+#        log_file.write("assiocations entitie measure list\n")
+#        for assiocation in [x[0] for x in assiocations.EntitieMeasureList]:
+#            log_file.write("Assiocation ("+str(assiocation.entity.id)+" , "+str(assiocation.measure.ovalRef.id)+" , "+str(assiocation.densitydistribution.value)+")\n")
+#        #input("pause")
+#        global_probability = GlobalAssiocation(assiocations).calc_global_probability()
+#        print(f"timestamp: {timestamp} completed \n")
+#        #select all measurements that are not in global chain - it will be new entities
+#        global_chain_measurements = []
+#
+#        assiocations_iterator:Assiocations = assiocations
+#        while assiocations_iterator.nextElement:
+#            global_chain_measurements.append(assiocations_iterator.assiocationList[0].measure)
+#            entitiesStore.updateEntitie(assiocations_iterator.assiocationList[0].entity,assiocations_iterator.assiocationList[0].measure,timestamp)
+#            log_file.write(str(assiocations_iterator))
+#            assiocations_iterator = assiocations_iterator.nextElement
+#        
+#        measure: Measure
+#        for measure in measure_list:
+#            if measure not in global_chain_measurements:
+#                # create new entitie
+#                new_entitie = Entitie()
+#                #entitiesStore.addEntitie(new_entitie)
+#                entitiesStore.updateEntitie(new_entitie,measure,timestamp)
+#        
 
 
 

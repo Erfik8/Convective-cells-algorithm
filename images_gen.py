@@ -31,10 +31,10 @@ class Constants(Singleton):
         self._AREA_OFFSET_X = 5
         self._AREA_OFFSET_Y = 5
         self._SCALE_FACTOR = 20
-        self._POPULATION_COUNT = 6
+        self._POPULATION_COUNT = 35
         self._FRAMES_PER_SEC = 40
         self._NEW_POPULATION_FACTOR = 0.08
-        self._START_POPULATION = 6
+        self._START_POPULATION = 10
         self._INFECTION_PROBAILLITY = 0.1
         self._TIME_TO_INFECT = 1
         self._INFECTION_RADIUS = 2
@@ -295,7 +295,7 @@ class Simulation():
             self.simulation_time += 1
             if(len(self.population) < _constants._POPULATION_COUNT):
                 for i in range(0,_constants._POPULATION_COUNT - len(self.population)):
-                    if(random.random()<0.5):
+                    if(random.random()<_constants._NEW_POPULATION_FACTOR):
                         self.add_new_person()
         self.tkwindow.root.after(int(1000/_constants._FRAMES_PER_SEC), self.update, iterator+1)
     def run(self):

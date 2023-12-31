@@ -35,7 +35,7 @@ class Entitie(Copyable,Printable):
             new_motion_vector = [0,0]
             new_motion_vector[0] = self.measuretuple[-1][0].get_average_coords()[0] - self.measuretuple[-2][0].get_average_coords()[0]
             new_motion_vector[1] = self.measuretuple[-1][0].get_average_coords()[1] - self.measuretuple[-2][0].get_average_coords()[1]
-            self.motion_vector = ((self.motion_vector[0] + new_motion_vector[0])/2,(self.motion_vector[1] + new_motion_vector[1])/2)
+            self.motion_vector = (new_motion_vector[0],new_motion_vector[1])
 
     def predicted_position(self) -> tuple[float,float,float,float]:
         predicted_position = tuple(map(sum, zip(self.last_position, self.motion_vector)))
@@ -52,7 +52,7 @@ class Entitie(Copyable,Printable):
         return self
     def __deepcopy__(self,memo) -> Entitie:
         new_entitie = Entitie()
-        new_entitie.measuretuple = copy.deepcopy(self.measuretuple)
+        new_entitie.measuretuple = copy.copy(self.measuretuple)
         new_entitie.motion_vector = copy.deepcopy(self.motion_vector)
         new_entitie.last_position_error = copy.deepcopy(self.last_position)
         new_entitie.last_position = copy.deepcopy(self.last_position)

@@ -1,3 +1,4 @@
 screenshots/
 __pycache__/
 log*.txt
+edit_images.py

@@ -63,7 +63,7 @@ class Oval(Copyable, Printable):
         self.measureRef: Measure = None
     
     def set_pixels_collection(self,pixels_collection:list[list[int,int]]) -> None:
-        self.pixels = copy.deepcopy(pixels_collection)
+        self.pixels = copy.copy(pixels_collection)
 
     def update_measure_ref(self,measureRef: Measure) -> None:
         self.measureRef = measureRef
